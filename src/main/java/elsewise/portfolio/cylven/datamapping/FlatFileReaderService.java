@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
@@ -41,9 +42,9 @@ public class FlatFileReaderService {
 
     public List<String> readInputLines() {
         try {
+            log.info("==================== Application run at {} ====================", LocalDateTime.now());
             List<String> lines = readLines(filePath);
-            lines.forEach(log::info);
-            log.info("File read: {} ({} rows)", filePath, lines.size());
+            log.info("Input flat file: {} ({} rows)\n{}", filePath, lines.size(), String.join("\n", lines));
             return lines;
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to read file: " + filePath, e);

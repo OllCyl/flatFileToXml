@@ -39,7 +39,7 @@ public class FlatFileConverterService {
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
         var writer = new StringWriter();
         transformer.transform(new DOMSource(document), new StreamResult(writer));
-        log.info("Converted XML:\n{}", writer);
+        log.info("Output XML:\n{}", writer);
     }
 
     Document parseToXmlDocument(List<String> rows) throws ParserConfigurationException {
