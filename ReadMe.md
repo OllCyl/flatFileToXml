@@ -14,6 +14,7 @@ Saknar information om:
 | PERSON → PHONE | 1:0..1 | En person kan ha två telefonnummer, ett för mobil och ett för jobb |
 | PERSON → FAMILY | 1:0..N | En person kan ha flera familjemedlemmar |
 | FAMILY → ADDRESS | 1:0..1 | En familjemedlem kan ha en adress |
+| FAMILY → PHONE | 1:0..1 | En familjemedlem kan ha ett telefonnummer, ett för mobil och ett för jobb |
 
 ``` mermaid
 erDiagram
@@ -24,6 +25,7 @@ erDiagram
     PERSON ||--o{ FAMILY : has
 
     FAMILY ||--o| ADDRESS : has
+    FAMILY ||--o| PHONE : has
 
     PEOPLE {
         int[] positions

@@ -39,12 +39,12 @@ public class FlatFileReaderService {
     }
 
 
-    public String getFileContent() {
+    public List<String> getFileContent() {
         try {
             List<String> lines = readLines(filePath);
             lines.forEach(log::info);
             log.info("Filen inläst: {} ({} rader)", filePath, lines.size());
-            return String.join("\n", lines);
+            return lines;
         } catch (IOException e) {
             throw new UncheckedIOException("Kunde inte läsa filen: " + filePath, e);
         }

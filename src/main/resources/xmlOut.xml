@@ -29,12 +29,11 @@
         <family>
             <name>Carl Philip</name>
             <born>1979</born>
+            <phone>
+                <mobile>0768-101802</mobile>
+                <office>08-101802</office>
+            </phone>
         </family>
-
-        <phone>
-            <mobile>0768-101802</mobile>
-            <office>08-101802</office>
-        </phone>
     </person>
 
     <person>
