@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<people>
+    <person>
+        <firstname>Ada</firstname>
+        <lastname>Lovelace</lastname>
+        <family>
+            <name>Grace</name>
+            <born>1985</born>
+            <address>
+                <street>Testgatan 1</street>
+                <city>Stockholm</city>
+                <postalcode>12345</postalcode>
+            </address>
+            <phone>
+                <mobile>070-1234567</mobile>
+                <office>08-1234567</office>
+            </phone>
+        </family>
+    </person>
+</people>

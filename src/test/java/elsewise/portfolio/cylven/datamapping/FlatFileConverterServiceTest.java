@@ -46,11 +46,11 @@ class FlatFileConverterServiceTest {
 
         InputStream expected = getResourceAsStream("testdata/" + testCase + "/expected.xml");
         if (expected == null) {
-            assertThrows(IllegalArgumentException.class, () -> converter.toDocument(rows));
+            assertThrows(IllegalArgumentException.class, () -> converter.parseToXmlDocument(rows));
             return;
         }
 
-        Document actual = converter.toDocument(rows);
+        Document actual = converter.parseToXmlDocument(rows);
         assertEquals(
                 normalize(readResource(expected)),
                 normalize(toXmlString(actual)));
