@@ -1,0 +1,52 @@
+package elsewise.portfolio.cylven.datamapping;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+
+@Component
+public class FlatFileReaderService {
+
+    /*
+     * This service is responsible for reading the flat file and returning its content as a string.
+     * If we instead need to file content to be shared in the application, we could use a singleton pattern.
+     */
+
+    private static final Logger log = LoggerFactory.getLogger(FlatFileReaderService.class);
+
+    @Value("${flatfile.input}")
+    private String filePath;
+
+    public List<String> readLines(String resourceName) throws IOException {
+        Resource resource = new ClassPathResource(resourceName);
+        try (var reader = new BufferedReader(
+                new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+            return reader.lines()
+                    .filter(line -> !line.isBlank())
+                    .toList();
+        }
+    }
+
+
+    public String getFileContent() {
+        try {
+            List<String> lines = readLines(filePath);
+            lines.forEach(log::info);
+            log.info("Filen inläst: {} ({} rader)", filePath, lines.size());
+            return String.join("\n", lines);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Kunde inte läsa filen: " + filePath, e);
+        }
+    }
+}

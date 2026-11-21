@@ -1,3 +1,6 @@
 spring:
   application:
     name: datamapping
+
+flatfile:
+  input: flatIn.txt
