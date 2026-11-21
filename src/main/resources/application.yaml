@@ -4,3 +4,7 @@ spring:
 
 flatfile:
   input: flatIn.txt
+
+logging:
+  file:
+    name: logs/datamapping.log

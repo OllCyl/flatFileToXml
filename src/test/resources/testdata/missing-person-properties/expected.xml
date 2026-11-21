@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<people>
+    <person>
+        <address>
+            <street>Unknown Street</street>
+            <city>London</city>
+        </address>
+    </person>
+</people>

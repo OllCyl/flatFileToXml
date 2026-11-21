@@ -17,12 +17,13 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 public class FlatFileConverterService {
 
     private static final Logger log = LoggerFactory.getLogger(FlatFileConverterService.class);
-
+    private static final Pattern FIELD_SEPARATOR = Pattern.compile("\\|");
     private final FlatFileReaderService flatFileReaderService;
 
     public FlatFileConverterService(FlatFileReaderService flatFileReaderService) {
@@ -30,67 +31,73 @@ public class FlatFileConverterService {
     }
 
     @PostConstruct
-    public void printFileContent() throws ParserConfigurationException, TransformerException {
-        Document document = convert(flatFileReaderService.getFileContent());
+    public void convertAndLog() throws ParserConfigurationException, TransformerException {
+        Document document = toDocument(flatFileReaderService.readInputLines());
 
         var transformer = TransformerFactory.newInstance().newTransformer();
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
         var writer = new StringWriter();
         transformer.transform(new DOMSource(document), new StreamResult(writer));
-        log.info("Konverterad XML:\n{}", writer);
+        log.info("Converted XML:\n{}", writer);
     }
 
-    Document convert(List<String> lines) throws ParserConfigurationException {
+    Document toDocument(List<String> rows) throws ParserConfigurationException {
         Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
         Element root = document.createElement("people");
         document.appendChild(root);
 
-        groupRowsByPrefix(lines, "P").forEach(personSegment ->
+        splitIntoSegments(rows, RowType.PERSON.prefix()).forEach(personSegment ->
                 root.appendChild(parsePerson(document, personSegment)));
 
         return document;
     }
 
     private Element parsePerson(Document document, List<String> personSegment) {
-        Element person = createElementFromRow(document, "person",
-                personSegment.getFirst().split("\\|"), "firstname", "lastname");
+        if (!personSegment.getFirst().startsWith(RowType.PERSON.prefix())) {
+            throw new IllegalArgumentException(
+                    "Person segment must start with a " + RowType.PERSON.prefix()
+                            + " row: " + personSegment.getFirst());
+        }
+        Element person = parseRow(document, RowType.PERSON, personSegment.getFirst());
 
-        groupRowsByPrefix(personSegment.subList(1, personSegment.size()), "F").forEach(group -> {
-            if (group.getFirst().startsWith("F")) {
-                Element family = createElementFromRow(document, "family",
-                        group.getFirst().split("\\|"), "name", "born");
-                rowsToElements(document, group.subList(1, group.size()))
-                        .forEach(family::appendChild);
-                person.appendChild(family);
-            } else {
-                rowsToElements(document, group).forEach(person::appendChild);
-            }
-        });
+        splitIntoSegments(personSegment.subList(1, personSegment.size()), RowType.FAMILY.prefix())
+                .forEach(subSegment -> {
+                    if (subSegment.getFirst().startsWith(RowType.FAMILY.prefix())) {
+                        Element family = parseRow(document, RowType.FAMILY, subSegment.getFirst());
+                        parseLeafRows(document, subSegment.subList(1, subSegment.size()))
+                                .forEach(family::appendChild);
+                        person.appendChild(family);
+                    } else {
+                        parseLeafRows(document, subSegment).forEach(person::appendChild);
+                    }
+                });
 
         return person;
     }
 
-    private List<Element> rowsToElements(Document document, List<String> rows) {
+    private List<Element> parseLeafRows(Document document, List<String> rows) {
         return rows.stream()
-                .map(row -> rowToElement(document, row))
+                .map(row -> parseLeafRow(document, row))
                 .toList();
     }
 
-    private Element rowToElement(Document document, String row) {
-        String[] fields = row.split("\\|");
-
-        return switch (fields[0]) {
-            case "T" -> createElementFromRow(document, "phone", fields, "mobile", "office");
-            case "A" -> createElementFromRow(document, "address", fields, "street", "city", "postalcode");
-            default -> throw new IllegalArgumentException("Okänd radtyp: " + fields[0]);
-        };
+    private Element parseLeafRow(Document document, String row) {
+        RowType type = RowType.fromPrefix(FIELD_SEPARATOR.split(row, 2)[0]);
+        if (type.isSegmentStart()) {
+            throw new IllegalArgumentException("Expected leaf row (T/A), got segment start: " + row);
+        }
+        return parseRow(document, type, row);
     }
 
-    private static Element createElementFromRow(Document document, String name, String[] rowValues, String... elementNames) {
+    private Element parseRow(Document document, RowType type, String row) {
+        return buildElement(document, type.elementName(), FIELD_SEPARATOR.split(row), type.fields());
+    }
+
+    private static Element buildElement(Document document, String name, String[] rowValues, List<String> elementNames) {
         Element element = document.createElement(name);
-        
-        for (int i = 0; i < elementNames.length && i + 1 < rowValues.length; i++) {
-            Element child = document.createElement(elementNames[i]);
+
+        for (int i = 0; i < elementNames.size() && i + 1 < rowValues.length; i++) {
+            Element child = document.createElement(elementNames.get(i));
             child.setTextContent(rowValues[i + 1]);
             element.appendChild(child);
         }
@@ -98,23 +105,24 @@ public class FlatFileConverterService {
         return element;
     }
 
-    private static List<List<String>> groupRowsByPrefix(List<String> lines, String prefix) {
+    private static List<List<String>> splitIntoSegments(List<String> rows, String prefix) {
         List<List<String>> segments = new ArrayList<>();
         List<String> current = new ArrayList<>();
 
-        for (String line : lines) {
-            if (line.startsWith(prefix)) {
+        for (String row : rows) {
+            // When we encounter a new prefix, we close the current segment and start a new one
+            if (row.startsWith(prefix)) {
                 if (!current.isEmpty()) {
-                    segments.add(current);   // ny start-markör stänger förra segmentet
+                    segments.add(current);
                 }
-                current = new ArrayList<>(); // och öppnar nästa
+                current = new ArrayList<>();
             }
-            current.add(line);
+            current.add(row);
         }
         if (!current.isEmpty()) {
-            segments.add(current);           // slutet på raderna stänger sista segmentet
+            segments.add(current);
         }
-        
+
         return segments;
     }
 }
