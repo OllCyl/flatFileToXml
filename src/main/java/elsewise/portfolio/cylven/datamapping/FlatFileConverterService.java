@@ -90,7 +90,7 @@ public class FlatFileConverterService {
         for (List<String> segment : findSegments(rows.subList(1, rows.size()), RowType.FAMILY)) {
 
             if (!segment.getFirst().startsWith(RowType.FAMILY.prefix())) {
-                appendLeafElements(document, person, segment);
+                appendChildElements(document, person, segment);
             } else {
                 person.appendChild(createFamily(document, segment));
             }
@@ -102,21 +102,21 @@ public class FlatFileConverterService {
     private Element createFamily(Document document, List<String> rows) {
         Element family = parseRow(document, RowType.FAMILY, rows.getFirst());
 
-        appendLeafElements(document, family, rows.subList(1, rows.size()));
+        appendChildElements(document, family, rows.subList(1, rows.size()));
 
         return family;
     }
 
-    private void appendLeafElements(Document document, Element parent, List<String> rows) {
+    private void appendChildElements(Document document, Element parent, List<String> rows) {
         for (String row : rows) {
-            parent.appendChild(parseLeafRow(document, row));
+            parent.appendChild(parseChildRow(document, row));
         }
     }
 
-    private Element parseLeafRow(Document document, String row) {
+    private Element parseChildRow(Document document, String row) {
         RowType type = rowTypeOf(row);
         if (type.isSegmentStart()) {
-            throw new IllegalArgumentException("Expected leaf row (T/A), got segment start: " + row);
+            throw new IllegalArgumentException("Expected child row (T/A), got segment start: " + row);
         }
         return parseRow(document, type, row);
     }

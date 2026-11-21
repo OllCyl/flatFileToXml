@@ -26,6 +26,7 @@ replay_pid*
 HELP.md
 target/
 /xmlOut.xml
+/logs/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
