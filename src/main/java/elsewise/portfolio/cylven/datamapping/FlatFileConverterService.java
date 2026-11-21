@@ -3,6 +3,7 @@ package elsewise.portfolio.cylven.datamapping;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -14,7 +15,11 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import java.io.IOException;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -25,6 +30,9 @@ public class FlatFileConverterService {
     private static final Logger log = LoggerFactory.getLogger(FlatFileConverterService.class);
     private static final Pattern FIELD_SEPARATOR = Pattern.compile("\\|");
     private final FlatFileReaderService flatFileReaderService;
+
+    @Value("${flatfile.output}")
+    private String outputPath;
 
     public FlatFileConverterService(FlatFileReaderService flatFileReaderService) {
         this.flatFileReaderService = flatFileReaderService;
@@ -39,7 +47,20 @@ public class FlatFileConverterService {
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
         var writer = new StringWriter();
         transformer.transform(new DOMSource(document), new StreamResult(writer));
-        log.info("Output XML:\n{}", writer);
+        String xml = writer.toString();
+
+        writeOutput(xml);
+        log.info("Output XML:\n{}", xml);
+    }
+
+    private void writeOutput(String xml) {
+        String path = outputPath.startsWith("file:") ? outputPath.substring("file:".length()) : outputPath;
+        try {
+            Files.writeString(Path.of(path), xml);
+            log.info("Output written to {}", path);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to write output file: " + path, e);
+        }
     }
 
     Document parseToXmlDocument(List<String> rows) throws ParserConfigurationException {

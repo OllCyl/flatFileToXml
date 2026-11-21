@@ -2,6 +2,7 @@ package elsewise.portfolio.cylven.datamapping;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.core.io.DefaultResourceLoader;
 import org.w3c.dom.Document;
 
 import javax.xml.transform.TransformerFactory;
@@ -25,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class FlatFileConverterServiceTest {
 
     private final FlatFileConverterService converter =
-            new FlatFileConverterService(new FlatFileReaderService());
+            new FlatFileConverterService(new FlatFileReaderService(new DefaultResourceLoader()));
 
     static Stream<String> testCases() throws Exception {
         Path testdataDir = Path.of(

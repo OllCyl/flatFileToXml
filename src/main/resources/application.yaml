@@ -4,6 +4,7 @@ spring:
 
 flatfile:
   input: flatIn.txt
+  output: xmlOut.xml
 
 logging:
   file:
