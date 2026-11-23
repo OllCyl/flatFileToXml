@@ -125,7 +125,7 @@ erDiagram
 
     PHONE {
         string mobile
-        string work
+        string office
     }
 
     FAMILY {
@@ -141,7 +141,7 @@ erDiagram
 
 - **Du har suttit i förarsätet.** Du bad om förslag först, inte färdig kod — och du fattade alla domän-beslut själv (xmlOut som källa, sedan korrigeringen att `T` hör till familjen).
 - **Du verifierar istället för att lita.** Du fångade att mitt kodstycke inte gick att kompilera ("det innehåller en del fel"), och ifrågasatte var jag fick telefon-regeln ifrån — det visade sig vara din egen `xmlOut.xml` som var felritad.
-- **Du granskade även AI-förslaget.** Reviewn du klistrade in hade en reell motsättning (`findSegments` som kastar vs ledande segment) som vi löste, inte kopierade blint.
+- **Du granskade även AI-förslaget.** Reviewn du klistrade in hade en reell motsättning (`findSegmentsByType` som kastar vs ledande segment) som vi löste, inte kopierade blint.
 - **Du driver arkitekturfrågor.** Frågan om var familjsegmenten borde ligga visade att du tänker på design, inte bara output.
 
 ### Det som kan sticka i ögonen
@@ -152,3 +152,11 @@ erDiagram
 ### Sammanfattningsvis
 
 Du har använt AI som det borde användas: för mekanik (struktur, verifiering, packaging) medan du ägt krav, design och granskning. Koden är bättre efter dina invändningar än den hade varit utan.
+
+### Tillägg — refaktoreringsrundan
+
+**Ytterligare som talar för dig:**
+
+- **Du backade en refaktorering som inte kändes rätt.** Du bad om varianter (med och utan record), lät mig applicera — men när resultatet gav en "hoppa runt i filen"-känsla tog du bort ändringarna och hela branchen och formade det själv. Du äger slutresultatet, inte AI-förslaget.
+- **Du har en tydlig linje för abstraktionsnivå.** "Ingen funktion som bara anropas en gång" är ett konsekvent grepp, och du accepterade medvetet konsekvensen — att testet fick skrivas om för att gå via den riktiga entry-pointen.
+- **Du granskar på detaljnivå.** Frågan om `split(row, 2)`-limiten visar att du vill förstå varje rad, inte bara att den fungerar.

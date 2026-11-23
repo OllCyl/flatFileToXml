@@ -40,9 +40,16 @@ public class FlatFileConverterService {
 
     @PostConstruct
     public void convertAndLog() throws ParserConfigurationException, TransformerException {
-        Document document;
+        Document document = createDocument();
         try {
-            document = parseToXmlDocument(flatFileReaderService.readInputLines());
+            Element people = document.createElement("people");
+            document.appendChild(people);
+
+            var personSegments = findSegmentsByType(flatFileReaderService.readInputLines(), RowType.PERSON);
+            for (List<String> personRows : personSegments) {
+                Element person = createPerson(document, personRows);
+                people.appendChild(person);
+            }
         } catch (IllegalArgumentException e) {
             log.error("Conversion failed — invalid flat file structure: {}", e.getMessage());
             throw e;
@@ -68,87 +75,64 @@ public class FlatFileConverterService {
         }
     }
 
-    Document parseToXmlDocument(List<String> rows) throws ParserConfigurationException {
-        Document document = createDocument();
-
-        Element people = document.createElement("people");
-        document.appendChild(people);
-
-        for (List<String> personRows : findSegments(rows, RowType.PERSON)) {
-            people.appendChild(createPerson(document, personRows));
-        }
-
-        return document;
-    }
-
     private Document createDocument() throws ParserConfigurationException {
         return DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
     }
 
     private Element createPerson(Document document, List<String> rows) {
+
         if (!rows.getFirst().startsWith(RowType.PERSON.prefix())) {
             throw new IllegalArgumentException("Invalid flat file: '" + rows.getFirst()
                     + "' — rows may not appear before the first person row (P|...).");
         }
+
         Element person = parseRow(document, RowType.PERSON, rows.getFirst());
+        
+        var familySegments = findSegmentsByType(rows.subList(1, rows.size()), RowType.FAMILY);
 
-        for (List<String> segment : findSegments(rows.subList(1, rows.size()), RowType.FAMILY)) {
+        for (List<String> familySegment : familySegments) {
 
-            if (!segment.getFirst().startsWith(RowType.FAMILY.prefix())) {
-                appendChildElements(document, person, segment);
+            if (!familySegment.getFirst().startsWith(RowType.FAMILY.prefix())) {
+                appendChildElements(document, person, familySegment);
             } else {
-                person.appendChild(createFamily(document, segment));
+                Element familyNode = parseRow(document, RowType.FAMILY, familySegment.getFirst());
+                appendChildElements(document, familyNode, familySegment.subList(1, familySegment.size()));
+
+                person.appendChild(familyNode);
             }
         }
 
         return person;
     }
 
-    private Element createFamily(Document document, List<String> rows) {
-        Element family = parseRow(document, RowType.FAMILY, rows.getFirst());
-
-        appendChildElements(document, family, rows.subList(1, rows.size()));
-
-        return family;
-    }
-
     private void appendChildElements(Document document, Element parent, List<String> rows) {
         for (String row : rows) {
-            parent.appendChild(parseChildRow(document, row));
-        }
-    }
+            RowType type;
 
-    private Element parseChildRow(Document document, String row) {
-        RowType type = rowTypeOf(row);
-        if (type.isSegmentStart()) {
-            throw new IllegalArgumentException("Invalid flat file: '" + row
-                    + "' — only T (phone) and A (address) rows are allowed in this position.");
-        }
-        return parseRow(document, type, row);
-    }
+            String prefix = FIELD_SEPARATOR.split(row, 2)[0];
+            try {
+                type = RowType.fromPrefix(prefix);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid flat file: '" + row
+                        + "' — unknown record type '" + prefix + "', expected P, T, A or F.");
+            }
 
-    private static RowType rowTypeOf(String row) {
-        String prefix = FIELD_SEPARATOR.split(row, 2)[0];
-        try {
-            return RowType.fromPrefix(prefix);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid flat file: '" + row
-                    + "' — unknown record type '" + prefix + "', expected P, T, A or F.");
+            if (type.isSegmentStart()) {
+                throw new IllegalArgumentException("Invalid flat file: '" + row
+                        + "' — only T (phone) and A (address) rows are allowed in this position.");
+            }
+
+            Element rowNode = parseRow(document, type, row);
+
+            parent.appendChild(rowNode);
         }
     }
 
     private Element parseRow(Document document, RowType type, String row) {
-        return buildElement(
-                document,
-                type.elementName(),
-                FIELD_SEPARATOR.split(row, -1),
-                type.fields()
-        );
-    }
+        String[] values = FIELD_SEPARATOR.split(row, -1);
+        List<String> fieldNames = type.fields();
 
-    private static Element buildElement(Document document, String name, String[] values, List<String> fieldNames) {
-        Element element = document.createElement(name);
-
+        Element element = document.createElement(type.elementName());
         for (int i = 0; i < fieldNames.size() && i + 1 < values.length; i++) {
             Element child = document.createElement(fieldNames.get(i));
             child.setTextContent(values[i + 1]);
@@ -158,7 +142,7 @@ public class FlatFileConverterService {
         return element;
     }
 
-    private static List<List<String>> findSegments(List<String> rows, RowType type) {
+    private static List<List<String>> findSegmentsByType(List<String> rows, RowType type) {
         List<List<String>> segments = new ArrayList<>();
         List<String> current = new ArrayList<>();
 
