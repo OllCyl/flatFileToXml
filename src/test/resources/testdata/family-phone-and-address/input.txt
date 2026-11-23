@@ -1,0 +1,4 @@
+P|Ada|Lovelace
+F|Grace|1985
+T|070-1234567|08-1234567
+A|Testgatan 1|Stockholm|12345

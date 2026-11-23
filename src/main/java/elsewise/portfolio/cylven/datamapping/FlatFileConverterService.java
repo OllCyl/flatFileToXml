@@ -40,7 +40,13 @@ public class FlatFileConverterService {
 
     @PostConstruct
     public void convertAndLog() throws ParserConfigurationException, TransformerException {
-        Document document = parseToXmlDocument(flatFileReaderService.readInputLines());
+        Document document;
+        try {
+            document = parseToXmlDocument(flatFileReaderService.readInputLines());
+        } catch (IllegalArgumentException e) {
+            log.error("Conversion failed — invalid flat file structure: {}", e.getMessage());
+            throw e;
+        }
 
         var transformer = TransformerFactory.newInstance().newTransformer();
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
@@ -50,7 +56,6 @@ public class FlatFileConverterService {
         String xml = writer.toString();
 
         writeOutput(xml);
-        log.info("Output XML:\n{}", xml);
     }
 
     private void writeOutput(String xml) {
@@ -59,7 +64,7 @@ public class FlatFileConverterService {
             Files.writeString(Path.of(path), xml);
             log.info("Output written to {}", path);
         } catch (IOException e) {
-            throw new UncheckedIOException("Failed to write output file: " + path, e);
+            throw new UncheckedIOException("Could not write output file '" + path + "'", e);
         }
     }
 
@@ -82,8 +87,8 @@ public class FlatFileConverterService {
 
     private Element createPerson(Document document, List<String> rows) {
         if (!rows.getFirst().startsWith(RowType.PERSON.prefix())) {
-            throw new IllegalArgumentException(
-                    "Unexpected row before " + RowType.PERSON + ": " + rows.getFirst());
+            throw new IllegalArgumentException("Invalid flat file: '" + rows.getFirst()
+                    + "' — rows may not appear before the first person row (P|...).");
         }
         Element person = parseRow(document, RowType.PERSON, rows.getFirst());
 
@@ -116,13 +121,20 @@ public class FlatFileConverterService {
     private Element parseChildRow(Document document, String row) {
         RowType type = rowTypeOf(row);
         if (type.isSegmentStart()) {
-            throw new IllegalArgumentException("Expected child row (T/A), got segment start: " + row);
+            throw new IllegalArgumentException("Invalid flat file: '" + row
+                    + "' — only T (phone) and A (address) rows are allowed in this position.");
         }
         return parseRow(document, type, row);
     }
 
     private static RowType rowTypeOf(String row) {
-        return RowType.fromPrefix(FIELD_SEPARATOR.split(row, 2)[0]);
+        String prefix = FIELD_SEPARATOR.split(row, 2)[0];
+        try {
+            return RowType.fromPrefix(prefix);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid flat file: '" + row
+                    + "' — unknown record type '" + prefix + "', expected P, T, A or F.");
+        }
     }
 
     private Element parseRow(Document document, RowType type, String row) {

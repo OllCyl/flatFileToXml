@@ -50,10 +50,10 @@ public class FlatFileReaderService {
         try {
             log.info("==================== Application run at {} ====================", LocalDateTime.now());
             List<String> lines = readLines(filePath);
-            log.info("Input flat file: {} ({} rows)\n{}", filePath, lines.size(), String.join("\n", lines));
+            log.info("Input flat file: {} ({} rows)", filePath, lines.size());
             return lines;
         } catch (IOException e) {
-            throw new UncheckedIOException("Failed to read file: " + filePath, e);
+            throw new UncheckedIOException("Could not read input file '" + filePath + "'", e);
         }
     }
 }
